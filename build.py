@@ -315,6 +315,9 @@ ol.how li{{margin:8px 0}}
 footer{{padding:30px 0 60px;font-size:14px;color:var(--muted);border-top:1px solid var(--rule)}}
 .faq h3{{font:600 16px/1.4 inherit;margin:18px 0 4px}}
 .faq p{{margin:0;color:#374151}}
+.phone{{display:none;background:#fff;border:1px solid var(--rule);border-left:4px solid var(--acc);border-radius:12px;padding:16px 18px;margin:20px 0 0}}
+.phone p{{margin:0 0 12px;font-size:15px;color:#374151}}
+@media (max-width:640px){{.phone{{display:block}}}}
 @media print{{
   body{{background:#fff}}
   .wrap>*:not(.printzone),.card-head,.actions,.preview svg:not(.printing){{display:none!important}}
@@ -334,6 +337,10 @@ footer{{padding:30px 0 60px;font-size:14px;color:var(--muted);border-top:1px sol
     <button class="btn primary" id="pageA4" aria-pressed="true">Paper: A4</button>
     <button class="btn" id="pageLetter" aria-pressed="false">Paper: US Letter</button>
     <a class="btn" href="{CTA_TOOL}" data-cta="hero_free_tool">Make a digital one instead</a>
+  </div>
+  <div class="phone">
+    <p><strong>On a phone?</strong> Printing from here is awkward. Type your goals into the free maker instead and save the board as a 1080&times;1920 lock-screen wallpaper, so you see it every time you unlock. No signup, no e-mail.</p>
+    <a class="btn primary" href="{CTA_TOOL}" data-cta="mobile_wallpaper">Make it my lock screen</a>
   </div>
 </header>
 
@@ -405,6 +412,12 @@ footer{{padding:30px 0 60px;font-size:14px;color:var(--muted);border-top:1px sol
       else{{fetch(EP,{{method:'POST',body:b,keepalive:true,mode:'no-cors'}});}}
     }}catch(e){{}}
   }}
+  // Every link to our site says which button it was and where the visitor came from
+  // (e.g. chatgpt.com), otherwise all clicks land as one identical ghpages_templates URL.
+  var src=(location.search.match(/[?&]utm_source=([^&]+)/)||[])[1]||(document.referrer?document.referrer.split('/')[2]:'direct');
+  Array.prototype.forEach.call(document.querySelectorAll('a[data-cta][href*="visionboard.bemooore.com"]'),function(a){{
+    a.href+='&utm_content='+encodeURIComponent(a.getAttribute('data-cta'))+'&utm_term='+encodeURIComponent('via_'+src);
+  }});
   function engage(how){{ if(engaged)return; engaged=true; beacon('page_engaged',how); }}
   setTimeout(function(){{engage('dwell6s');}},6000);
   window.addEventListener('scroll',function(){{
