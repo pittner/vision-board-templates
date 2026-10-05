@@ -46,6 +46,14 @@ footer{padding:30px 0 60px;font-size:14px;color:var(--muted);border-top:1px soli
 .phone{display:none;background:#fff;border:1px solid var(--rule);border-left:4px solid var(--acc);border-radius:12px;padding:16px 18px;margin:20px 0 0}
 .phone p{margin:0 0 12px;font-size:15px;color:#374151}
 @media (max-width:640px){.phone{display:block}}
+.after{margin:0 20px 20px;padding:16px 18px;border:1px solid var(--rule);border-left:4px solid var(--acc);border-radius:12px;background:#FAF7FF;font-size:15px;color:#374151}
+.after[hidden]{display:none}
+.after p{margin:0 0 10px}
+.after .lbl{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
+.tip-amts{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
+.tip-amt.on{background:var(--acc);border-color:var(--acc);color:#fff}
+#tip-go:disabled{opacity:.7;cursor:default}
+#tip-msg{margin-top:8px;font-size:13px;color:var(--muted)}
 @media print{
   body{background:#fff}
   .wrap>*:not(.printzone),.card-head,.actions,.preview svg:not(.printing){display:none!important}
@@ -147,6 +155,22 @@ footer{padding:30px 0 60px;font-size:14px;color:var(--muted);border-top:1px soli
 </article>
 </div>
 
+<!-- after-dl: shown inside the card the visitor just downloaded or printed -->
+<div class="after" id="afterDl" hidden>
+  <p><strong>Saved.</strong> Want the same goals on your phone as well? Type them into the free maker and save a 1080&times;1920 lock-screen wallpaper. No signup, no e-mail.</p>
+  <a class="btn primary" href="https://visionboard.bemooore.com/free-vision-board-maker/?utm_source=ghpages_templates&utm_medium=referral&utm_campaign=printable_templates" data-cta="after_dl_tool">Make it my lock screen</a>
+  <div class="lbl">Or just say thanks</div>
+  <p>These templates are free and MIT licensed, and they stay that way. If one saved you time, you can send a one-off thank you. You get nothing extra for it.</p>
+  <div class="tip-amts" role="group" aria-label="Amount">
+    <button type="button" class="btn tip-amt" data-amt="3">&euro;3</button>
+    <button type="button" class="btn tip-amt on" data-amt="5">&euro;5</button>
+    <button type="button" class="btn tip-amt" data-amt="10">&euro;10</button>
+  </div>
+  <button type="button" class="btn" id="tip-go">Say thanks with PayPal</button>
+  <div id="tip-pp" style="max-width:360px;margin-top:10px"></div>
+  <div id="tip-msg">PayPal handles the payment. Nothing is loaded from PayPal until you press the button.</div>
+</div>
+
 <section class="block">
   <h2>How to use a printed vision board</h2>
   <ol class="how">
@@ -240,6 +264,51 @@ footer{padding:30px 0 60px;font-size:14px;color:var(--muted);border-top:1px soli
   document.getElementById('pageA4').onclick=function(){paper('A4');beacon('cta_click','paper_a4');};
   document.getElementById('pageLetter').onclick=function(){paper('Letter');beacon('cta_click','paper_letter');};
 
+  // After the first download or print, the panel moves into that card, so it appears
+  // right under the buttons the visitor just used instead of somewhere down the page.
+  var after=document.getElementById('afterDl');
+  function showAfter(slug){
+    var card=document.getElementById(slug); if(!card||!after)return;
+    if(after.parentNode!==card) card.appendChild(after);
+    after.hidden=false;
+  }
+
+  // Voluntary thank-you, same flow as the free maker tip (T-095): PayPal SDK loads only on click.
+  var amt='5',tipLoading=false,amts=document.querySelector('.tip-amts'),go=document.getElementById('tip-go'),msg=document.getElementById('tip-msg');
+  amts.addEventListener('click',function(e){
+    var b=e.target.closest('.tip-amt'); if(!b)return;
+    amt=b.getAttribute('data-amt');
+    Array.prototype.forEach.call(amts.querySelectorAll('.tip-amt'),function(x){x.classList.toggle('on',x===b);});
+  });
+  go.addEventListener('click',function(){
+    if(tipLoading)return; tipLoading=true; go.disabled=true; go.textContent='Loading PayPal...';
+    beacon('cta_click','tip_open_'+amt);
+    var s=document.createElement('script');
+    s.src='https://www.paypal.com/sdk/js?client-id=Ae-xjt-swINgDhNcLWajKo9dP2_1J9HPULAWafFQcmUmkZCZ6N1Kzy56GXo1YXIpUO4kjlsuSunMSTaQ&currency=EUR&intent=capture&components=buttons';
+    s.onerror=function(){ tipLoading=false; go.disabled=false; go.textContent='Say thanks with PayPal'; msg.textContent='PayPal could not be loaded. Please try again in a moment.'; };
+    s.onload=function(){
+      go.style.display='none';
+      window.paypal.Buttons({
+        style:{layout:'vertical',label:'paypal'},
+        createOrder:function(d,actions){
+          return actions.order.create({
+            purchase_units:[{amount:{value:amt,currency_code:'EUR'},custom_id:'tip-vb-templates',description:'Printable vision board templates, voluntary thank you'}],
+            application_context:{brand_name:'VisionBoard',user_action:'PAY_NOW',shipping_preference:'NO_SHIPPING'}
+          });
+        },
+        onApprove:function(d,actions){
+          return actions.order.capture().then(function(){
+            beacon('cta_click','tip_paid_'+amt);
+            document.getElementById('tip-pp').innerHTML='<p><strong>Thank you.</strong> The payment went through.</p>';
+            msg.textContent='PayPal has emailed you the receipt.';
+          });
+        },
+        onError:function(){ msg.textContent='Something went wrong at PayPal and no money was taken. You can try again.'; }
+      }).render('#tip-pp');
+    };
+    document.head.appendChild(s);
+  });
+
   function svgOf(slug){ return document.getElementById('svg-'+slug); }
   function serialize(slug){
     var s=svgOf(slug).cloneNode(true); s.removeAttribute('class'); s.removeAttribute('id');
@@ -260,10 +329,11 @@ footer{padding:30px 0 60px;font-size:14px;color:var(--muted);border-top:1px soli
       z.innerHTML=''; z.appendChild(svgOf(slug).cloneNode(true)); z.style.display='block';
       beacon('template_print',slug);
       window.print();
-      setTimeout(function(){z.style.display='none';z.innerHTML='';},800);
+      setTimeout(function(){z.style.display='none';z.innerHTML='';showAfter(slug);},800);
     } else if((slug=b.getAttribute('data-svg'))){
       save(new Blob([serialize(slug)],{type:'image/svg+xml'}),'vision-board-'+slug+'.svg');
       beacon('template_download',slug+'|svg');
+      showAfter(slug);
     } else if((slug=b.getAttribute('data-png'))){
       var img=new Image(), src='data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(serialize(slug))));
       img.onload=function(){
@@ -274,6 +344,7 @@ footer{padding:30px 0 60px;font-size:14px;color:var(--muted);border-top:1px soli
       };
       img.src=src;
       beacon('template_download',slug+'|png');
+      showAfter(slug);
     }
   });
 })();
